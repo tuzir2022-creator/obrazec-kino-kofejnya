@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="vibe.css">
+<link rel="stylesheet" href="assets/coffee-pour.css">
 <style>
 /* Образец «Кино × Зерно». Стиль: скролл-сцены движка vibe (Галерея 45). Палитра взята из кофе: молочная пенка, эспрессо, карамель.
    Шрифты Unbounded + Onest (кириллица, свободная лицензия). Заказ уходит на наш API (база D1). */
@@ -119,6 +120,20 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   .gal .work { width: min(66vw, 17rem); }
   .v-page [data-v-act="pan"] [data-v-stage] { scroll-padding-inline: var(--v-gutter); }
 }
+
+/* Блок «Как готовится ваш кофе»: Tailwind подключён без глобального сброса, нужные сбросы тут (нулевая специфичность) */
+:where(.cpm-scope) *, :where(.cpm-scope) *::before, :where(.cpm-scope) *::after { box-sizing: border-box; }
+:where(.cpm-scope) button { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+:where(.cpm-scope) p { margin: 0; }
+:where(.cpm-scope) svg { display: block; }
+.pour-sec .v-wrap { width: min(100% - 2 * var(--v-gutter), 64rem); }
+.v-page .pour-sec h2.nd { font-size: clamp(1.7rem, 1.1rem + 1.8vw, 2.5rem); line-height: 1.1; margin: 0 0 var(--v-3); }
+.v-page .pour-lead { color: var(--v-ink-soft); max-width: 46ch; margin: 0 0 var(--v-5); }
+.pour-buy { display: flex; align-items: center; gap: var(--v-4); flex-wrap: wrap; margin-top: var(--v-5); }
+.pour-qty { color: var(--color-muted); font-weight: 500; }
+.v-page .pour-credit { margin: var(--v-4) 0 0; color: var(--color-muted); font-size: .8125rem; }
+.pour-credit a { color: var(--color-ink); }
+@media (max-width: 380px) { .pour-buy .btn { width: 100%; white-space: normal; text-align: center; padding-block: var(--v-2); } }
 
 /* Меню */
 .menu-sec .v-wrap { width: min(100% - 2 * var(--v-gutter), 46rem); }
@@ -238,6 +253,20 @@ textarea { width: 100%; min-height: 72px; padding: var(--v-2) var(--v-4); border
     </div>
   </section>
 
+  <!-- Как готовится кофе: анимированные напитки (React-компонент Coffee Pour Menu, собран в assets/coffee-pour.js) -->
+  <section id="pour" class="v-section pour-sec">
+    <div class="v-wrap">
+      <h2 class="nd" data-v-in data-v-in-self>Как готовится ваш кофе</h2>
+      <p class="pour-lead">Выберите напиток слева: чашка наливается у вас на глазах. Понравилось, добавьте в заказ.</p>
+      <div class="cpm-scope" id="coffee-pour-root"></div>
+      <div class="pour-buy">
+        <button class="btn btn-primary" id="pourAdd" type="button" data-act="inc" data-id="cappuccino">Добавить в заказ</button>
+        <span class="pour-qty" id="pourQty" aria-live="polite"></span>
+      </div>
+      <p class="pour-credit">Анимация напитков: компонент Coffee Pour Menu, <a href="https://aakashmehra.com/ref/coffeepourmenu" target="_blank" rel="noopener noreferrer">aakashmehra.com</a></p>
+    </div>
+  </section>
+
   <!-- Меню -->
   <section id="menu" class="v-section menu-sec">
     <div class="v-wrap">
@@ -262,6 +291,7 @@ textarea { width: 100%; min-height: 72px; padding: var(--v-2) var(--v-4); border
 <dialog id="sheet" aria-labelledby="sheetTitle"><div class="sheet" id="sheetBody"></div></dialog>
 
 <script src="vibe.js"></script>
+<script src="assets/coffee-pour.js" defer></script>
 <script>
 "use strict";
 const API = "https://zerno-lepestok-api.tuzir2022.workers.dev";
@@ -393,7 +423,20 @@ function updateBar() {
   const n = count();
   $("#cartbar").classList.toggle("on", n > 0);
   $("#cartSum").innerHTML = `${money(total())}<small>${n} поз.</small>`;
+  updatePourBtn();
 }
+
+/* Блок «Как готовится ваш кофе»: компонент сообщает, какой напиток выбран, кнопка добавляет его в заказ */
+let pourId = "cappuccino";
+function updatePourBtn() {
+  const m = byId[pourId], b = $("#pourAdd");
+  if (!m || !b) return;
+  b.dataset.id = pourId;
+  b.textContent = `Добавить в заказ: ${m.name} · ${money(m.price)}`;
+  const q = state.cart[pourId] || 0;
+  $("#pourQty").textContent = q ? `В заказе: ${q}` : "";
+}
+window.addEventListener("cpm:select", (e) => { pourId = e.detail; updatePourBtn(); });
 
 /* ---------- Лист заказа ---------- */
 function renderSheet() {
