@@ -134,6 +134,20 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 .v-page .pour-credit { margin: var(--v-4) 0 0; color: var(--color-muted); font-size: .8125rem; }
 .pour-credit a { color: var(--color-ink); }
 @media (max-width: 380px) { .pour-buy .btn { width: 100%; white-space: normal; text-align: center; padding-block: var(--v-2); } }
+/* Блок целиком помещается на один экран: высота сцены считается от высоты окна, поэтому при любом масштабе видно все напитки.
+   Правила для компьютера (от 640 px): на телефоне остаётся обычная раскладка компонента. */
+.pour-sec { min-height: 100svh; display: flex; align-items: center; padding-block: 4.75rem 1rem; }
+.v-page .pour-sec h2.nd { margin-bottom: .4rem; }
+.v-page .pour-lead { margin-bottom: var(--v-3); }
+.pour-buy { margin-top: var(--v-3); }
+.v-page .pour-credit { margin-top: var(--v-2); }
+@media (min-width: 640px) {
+  .cpm-scope > div { padding: 1rem 1.75rem; gap: 3rem; grid-template-columns: minmax(0, 22rem) auto; justify-content: center; }
+  .cpm-scope [class*="aspect-"] { aspect-ratio: 9 / 10; width: auto; height: clamp(13rem, calc(100svh - 21.5rem), 36rem); }
+  .cpm-scope [role="radio"] { padding: .5rem 1.25rem; }
+  .cpm-scope [role="radio"] .flex-col > span:first-child { font-size: clamp(1.15rem, 3.4svh, 2rem); }
+  .cpm-scope [role="radio"] .flex-col > span:last-child:not(:first-child) { font-size: clamp(.7rem, 1.8svh, .8125rem); }
+}
 
 /* Меню */
 .menu-sec .v-wrap { width: min(100% - 2 * var(--v-gutter), 46rem); }
