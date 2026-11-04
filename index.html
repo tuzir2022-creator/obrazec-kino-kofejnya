@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2B1D16">
+<title>Кофейня «Зерно» - меню и заказ со стола</title>
+<meta name="description" content="Образец в стиле «Кино»: скролл-сцены, лента популярных блюд и цифровое меню с заказом со стола.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vibe.css">
+<style>
+/* Образец «Кино × Зерно». Стиль: скролл-сцены движка vibe (Галерея 45). Палитра взята из кофе: молочная пенка, эспрессо, карамель.
+   Шрифты Unbounded + Onest (кириллица, свободная лицензия). Заказ уходит на наш API (база D1). */
+:root {
+  --color-paper: #F0E8DC;
+  --color-surface: #FAF6EF;
+  --color-ink: #2B1D16;
+  --color-ink-rgb: 43 29 22;
+  --color-muted: #6E5E52;
+  --color-line: #DCCFBF;
+  --color-accent: #A8581D;
+  --color-accent-hover: #8E4916;
+  --color-accent-ink: #FFFFFF;
+  --color-focus: #1D4ED8;
+  --color-ok: #2E5B45;
+  --color-ok-bg: #E1ECDD;
+  --color-err: #8A2412;
+  --color-err-bg: #F6DDD6;
+  --color-thumb: #E4D8C8;
+  --color-warn: #8F7212;
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-s: 10px; --radius-m: 16px; --radius-l: 24px;
+  /* отступы движка нужны и за пределами .v-page: нижняя панель и лист заказа */
+  --v-1: 0.25rem; --v-2: 0.5rem; --v-3: 0.75rem; --v-4: 1rem; --v-5: 1.5rem; --v-6: 2rem; --v-7: 3rem;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; background: var(--color-paper); overflow-x: clip; font-family: var(--font-body); color: var(--color-ink); }
+button, select, textarea, input { font-family: inherit; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+[hidden] { display: none !important; }
+.v-page {
+  --v-canvas: var(--color-paper); --v-surface: var(--color-surface);
+  --v-ink: var(--color-ink); --v-ink-soft: var(--color-muted);
+  --v-accent: var(--color-accent); --v-accent-ink: var(--color-accent-ink);
+  --v-font-display: var(--font-display); --v-font-text: var(--font-body);
+  --v-shadow-color: 43 29 22; --v-radius: 18px; --v-track-tight: -0.03em;
+  --v-t-xs: clamp(0.8125rem, 0.79rem + 0.15vw, 0.85rem);
+  --v-t-sm: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+}
+.v-page button, .v-page select, .v-page textarea { font-family: inherit; }
+.v-page :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.warn { color: var(--color-warn); }
+.nd { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+
+/* Шапка */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: var(--v-4);
+  padding: var(--v-3) max(var(--v-gutter), env(safe-area-inset-left)); padding-top: calc(var(--v-3) + env(safe-area-inset-top));
+  background: rgb(var(--color-ink-rgb) / .72); color: var(--color-paper); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.bar__mark { font: 600 var(--v-t-base) var(--font-display); text-decoration: none; color: var(--color-paper); letter-spacing: -0.01em; }
+.index { display: flex; gap: var(--v-6); font-size: var(--v-t-sm); }
+.index a { text-decoration: none; color: rgb(240 232 220 / .8); padding-block: .3em; white-space: nowrap; }
+.index a:hover { color: #fff; }
+.bar .v-btn { padding: .65em 1.1em; background: var(--color-paper); color: var(--color-ink); }
+.v-page .bar a.v-btn, .v-page .bar button.v-btn { color: var(--color-ink); }
+@media (max-width: 600px) { .index { display: none; } }
+
+/* Сцена 1: зал на весь экран */
+.plx { position: absolute; inset: -6% 0; will-change: transform; }
+.plx img { width: 100%; height: 100%; object-fit: cover; display: block; max-width: none; }
+.scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(to top, rgb(var(--color-ink-rgb) / .92) 0%, rgb(var(--color-ink-rgb) / .62) 38%, rgb(var(--color-ink-rgb) / .12) 78%); }
+.scene .v-copy { z-index: 3; color: var(--color-paper); max-width: min(46rem, 90vw); bottom: clamp(2.5rem, 11vh, 7rem); }
+.v-page .hero-h { font-size: clamp(2rem, 1.1rem + 4vw, 4.6rem); line-height: 1.05; margin: 0 0 var(--v-4); color: #fff; }
+.v-page .hero-p { font-size: var(--v-t-lg); max-width: 34ch; margin: 0 0 var(--v-5); color: rgb(240 232 220 / .9); }
+.hero-cta { display: flex; gap: var(--v-3); flex-wrap: wrap; align-items: center; }
+.v-page .scene a.v-btn--ghost { color: var(--color-paper); box-shadow: inset 0 0 0 1px rgb(240 232 220 / .55); }
+.table-lab { margin: 0 0 var(--v-2); font-size: var(--v-t-base); color: rgb(240 232 220 / .85); }
+.v-page .table-no { margin: 0 0 var(--v-3); font: 600 clamp(6rem, 24vw, 13rem)/.9 var(--font-display); letter-spacing: -0.05em; color: #fff; }
+.table-pick select { min-height: 48px; padding: 0 var(--v-4); border-radius: var(--radius-s); border: 2px solid var(--color-paper); background: var(--color-ink); color: var(--color-paper); margin-bottom: var(--v-4); }
+@media (max-width: 860px) { .scene .v-copy { left: var(--v-gutter); right: var(--v-gutter); } }
+
+/* Сцена 2: лента популярного */
+.gal { display: flex; flex-direction: column; justify-content: center; height: 100%; padding-top: 4.5rem; padding-bottom: 5.5rem; }
+.gal__rail { padding-inline: var(--v-gutter); align-items: flex-start; gap: clamp(1rem, 2.5vw, 2.5rem); }
+.gal__intro { flex: none; width: clamp(17rem, 28vw, 26rem); padding-top: clamp(.5rem, 4vh, 3rem); padding-right: var(--v-6); }
+.v-page .gal__intro h2 { font-size: clamp(1.7rem, 1.1rem + 1.8vw, 2.5rem); line-height: 1.12; margin: 0 0 var(--v-4); }
+.v-page .gal__intro p { color: var(--v-ink-soft); max-width: 30ch; margin: 0 0 var(--v-5); }
+.work { flex: none; width: min(clamp(230px, 24vw, 330px), calc((100svh - 14rem) * .75)); }
+.work__card { display: block; background: var(--color-surface); border-radius: var(--v-radius); overflow: hidden; box-shadow: var(--v-e1); }
+.work__card img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; display: block; background: var(--color-thumb); }
+.gal__rail { align-items: stretch; }
+.gal__intro { align-self: flex-start; }
+.work { display: flex; flex-direction: column; }
+.work__cap { padding: var(--v-4) var(--v-1) 0; display: flex; flex-direction: column; gap: var(--v-1); flex: 1; }
+.work__buy { margin-top: auto !important; padding-top: var(--v-3); }
+.v-page .work__cap h3 { font: 600 var(--v-t-base) var(--font-display); letter-spacing: -0.01em; }
+.v-page .work__cap p { color: var(--v-ink-soft); font-size: var(--v-t-sm); }
+.work__cap b { color: var(--v-ink); }
+.work__buy { display: grid; gap: var(--v-3); margin-top: var(--v-3); }
+.work__buy b { font: 600 var(--v-t-lg) var(--font-display); letter-spacing: -0.02em; }
+.work__buy .ctl { display: block; }
+.work__buy .add { width: 100%; }
+.work__buy .stepper { width: 100%; justify-content: space-between; }
+.work__buy .stepper button { width: 48px; height: 44px; }
+@media (max-width: 860px) { .gal__intro { width: 62vw; padding-right: var(--v-3); padding-top: 0; } .work { width: min(66vw, 17rem); } }
+@media (pointer: coarse) {
+  .gal { height: auto; padding-top: 5rem; padding-bottom: var(--v-5); display: block; }
+  .gal__intro { width: min(100%, 34rem); padding: 0 var(--v-gutter); margin-bottom: var(--v-5); }
+}
+
+/* Меню */
+.menu-sec .v-wrap { width: min(100% - 2 * var(--v-gutter), 46rem); }
+.v-page .menu-sec h2.nd { font-size: clamp(1.7rem, 1.1rem + 1.8vw, 2.5rem); line-height: 1.1; margin: 0 0 var(--v-4); }
+.cats { position: sticky; top: 3.7rem; z-index: 5; margin: 0 calc(var(--v-gutter) * -1); padding: var(--v-2) var(--v-gutter); background: var(--color-paper); display: flex; gap: var(--v-2); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--color-line); }
+.cats::-webkit-scrollbar { display: none; }
+@media (min-width: 960px) { .cats { margin: 0; padding-left: 0; padding-right: 0; } }
+.chip { flex: none; min-height: 40px; padding: 0 var(--v-4); border-radius: 999px; border: 2px solid var(--color-line); background: transparent; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.chip[aria-current="true"] { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+.group { padding-top: var(--v-7); scroll-margin-top: 7rem; }
+.v-page .group h3.nd { font-size: 1.5rem; line-height: 1.15; margin: 0 0 var(--v-2); }
+.item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--v-4); align-items: center; padding: var(--v-4) 0; border-bottom: 1px solid var(--color-line); }
+.thumb { width: 64px; height: 64px; border-radius: var(--radius-m); object-fit: cover; background: var(--color-thumb); display: block; }
+.item-body { min-width: 0; }
+.v-page .item-name { font: 600 .9375rem/1.25 var(--font-display); letter-spacing: -0.01em; }
+.v-page .item-desc { margin: 2px 0 0; color: var(--color-muted); font-size: .875rem; }
+.meta { margin-left: 4px; white-space: nowrap; }
+.item-buy { display: flex; flex-direction: column; align-items: flex-end; gap: var(--v-2); }
+.price { font-weight: 600; white-space: nowrap; }
+.add { min-height: 40px; padding: 0 var(--v-4); border-radius: 999px; border: 2px solid var(--color-ink); background: transparent; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.add:hover { background: var(--color-ink); color: var(--color-paper); }
+.stepper { display: inline-flex; align-items: center; border-radius: 999px; background: var(--color-ink); color: var(--color-paper); }
+.stepper button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: inherit; font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.stepper button:hover { background: rgb(255 255 255 / .14); }
+.stepper output { min-width: 24px; text-align: center; font-weight: 600; }
+@media (max-width: 380px) {
+  .item { grid-template-columns: 52px minmax(0, 1fr); gap: var(--v-2) var(--v-4); }
+  .thumb { width: 52px; height: 52px; }
+  .item-buy { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .cartbar-in { padding-left: var(--v-4); gap: var(--v-2); }
+  .cart-sum small { display: none; }
+  .cartbar .btn { padding: 0 var(--v-4); }
+}
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--v-2); min-height: 48px; padding: 0 var(--v-5); border-radius: 999px; border: 2px solid var(--color-ink); background: transparent; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform .14s, background .14s; }
+.btn:hover { background: var(--color-surface); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
+.btn-primary:hover { background: var(--color-accent-hover); }
+
+/* Нижняя панель корзины */
+.cartbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; padding: var(--v-2) var(--v-4) calc(var(--v-2) + env(safe-area-inset-bottom)); padding-left: max(var(--v-4), env(safe-area-inset-left)); padding-right: max(var(--v-4), env(safe-area-inset-right)); pointer-events: none; }
+.cartbar-in { max-width: 560px; margin: 0 auto; pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--v-4); padding: var(--v-2) var(--v-2) var(--v-2) var(--v-5); border-radius: 999px; background: var(--color-ink); color: var(--color-paper); box-shadow: 0 10px 30px rgb(43 29 22 / .28); transform: translateY(140%); transition: transform .26s cubic-bezier(.22, 1, .36, 1); }
+.cartbar.on .cartbar-in { transform: none; }
+.cart-sum { font-weight: 600; white-space: nowrap; }
+.cart-sum small { font-weight: 400; opacity: .75; margin-left: var(--v-2); font-size: .875rem; }
+.cartbar .btn-primary { min-height: 48px; }
+
+/* Заказ (нижний лист) */
+dialog { border: 0; padding: 0; color: var(--color-ink); background: var(--color-surface); width: min(100%, 560px); max-height: 92dvh; margin: auto auto 0; border-radius: var(--radius-l) var(--radius-l) 0 0; }
+@media (min-width: 700px) { dialog { margin: auto; border-radius: var(--radius-l); } }
+dialog::backdrop { background: rgb(43 29 22 / .5); }
+.sheet { padding: var(--v-5) var(--v-4) calc(var(--v-5) + env(safe-area-inset-bottom)); display: grid; gap: var(--v-4); font-family: var(--font-body); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: var(--v-4); }
+.sheet-head h2 { margin: 0; font: 600 1.25rem/1.2 var(--font-display); }
+.x { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--color-line); background: transparent; font-size: 1.25rem; cursor: pointer; }
+.lines { list-style: none; margin: 0; padding: 0; }
+.lines li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--v-4); align-items: center; padding: var(--v-4) 0; border-bottom: 1px solid var(--color-line); }
+.lines .stepper { justify-self: start; }
+.ln { font-weight: 600; overflow-wrap: anywhere; }
+.ln small { display: block; color: var(--color-muted); font-weight: 400; font-size: .875rem; }
+.lsum { font-weight: 600; white-space: nowrap; text-align: right; }
+.lines .rm { justify-self: end; min-height: 40px; padding: 0 var(--v-2); border: 0; background: transparent; color: var(--color-err); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; cursor: pointer; }
+.empty { margin: 0; padding: var(--v-5) 0; color: var(--color-muted); }
+.total { display: flex; justify-content: space-between; font: 600 1.125rem var(--font-display); }
+label.field { display: grid; gap: 4px; font-size: .875rem; color: var(--color-muted); }
+textarea { width: 100%; min-height: 72px; padding: var(--v-2) var(--v-4); border-radius: var(--radius-s); border: 2px solid var(--color-line); background: var(--color-paper); resize: vertical; font-size: 1rem; }
+.sheet-actions { display: grid; gap: var(--v-2); }
+.msg { margin: 0; padding: var(--v-2) var(--v-4); border-radius: var(--radius-s); font-size: .875rem; }
+.msg.err { background: var(--color-err-bg); color: var(--color-err); }
+.msg.ok { background: var(--color-ok-bg); color: var(--color-ok); }
+.done h3 { margin: 0; font: 600 2.5rem/1 var(--font-display); }
+.done p { margin: 4px 0 0; }
+
+.foot { padding: var(--v-7) var(--v-gutter) 8rem; }
+.foot .demo-note { margin: 0 auto; max-width: 46rem; padding: var(--v-4); border-radius: var(--radius-m); background: var(--color-surface); color: var(--color-muted); font-size: .875rem; }
+.foot .demo-note a { color: var(--color-ink); }
+</style>
+</head>
+<body>
+<div class="v-page" id="page">
+  <div data-v-progress></div>
+
+  <header class="bar">
+    <a class="bar__mark" href="#top">Зерно</a>
+    <nav class="index" aria-label="Разделы"><a href="#popular">Популярное</a><a href="#menu">Меню</a></nav>
+    <button class="v-btn" id="callTop" type="button">Позвать официанта</button>
+  </header>
+
+  <!-- Сцена 1: зал на весь экран, второй кадр с номером стола -->
+  <section id="top" class="scene" data-v-act="pin" data-v-span="2.2">
+    <div data-v-stage>
+      <div class="v-fill"><div class="plx" data-v-parallax="-0.5"><img src="assets/scene-hall.webp" alt="Уютный зал кофейни с деревянными столами" width="1920" height="1080" fetchpriority="high"></div></div>
+      <div class="scrim"></div>
+
+      <div class="v-copy v-copy--lead" data-v-cue="0 0.5 0 0.2">
+        <h1 class="hero-h nd" data-v-kinetic="words">Кофе, который хочется допить до дна</h1>
+        <p class="hero-p">Кофейня и завтраки. Выберите позиции в меню, мы принесём заказ прямо к вашему столу.</p>
+        <div class="hero-cta"><a class="v-btn" href="#menu">Смотреть меню</a><a class="v-btn v-btn--ghost" href="#popular">Популярное</a></div>
+      </div>
+      <div class="v-copy v-copy--lead" data-v-cue="0.56">
+        <p class="table-lab">Ваш стол</p>
+        <p class="table-no tableNo" aria-live="polite">-</p>
+        <div class="table-pick" hidden><label class="sr" for="tableSel" style="position:absolute;left:-9999px">Номер стола</label><select id="tableSel"></select></div>
+        <p class="hero-p">Заказ уйдёт на кухню, платите официанту. Часы работы: <span class="warn" style="color:#E9C95C">&lt;&lt;запросить у заказчика&gt;&gt;</span></p>
+        <div class="hero-cta"><a class="v-btn" href="#menu">Открыть меню</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Сцена 2: лента популярного -->
+  <section id="popular" data-v-act="pan" data-v-span="2.2" aria-label="Популярное">
+    <div data-v-stage>
+      <div class="gal"><div class="gal__rail" data-v-pan="0.04" id="ribbon"></div></div>
+    </div>
+  </section>
+
+  <!-- Меню -->
+  <section id="menu" class="v-section menu-sec">
+    <div class="v-wrap">
+      <h2 class="nd" data-v-in data-v-in-self>Меню</h2>
+      <nav class="cats" id="cats" aria-label="Разделы меню"></nav>
+      <div id="groups"></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p class="demo-note">Образец в стиле «Кино» (скролл-сцены). Демонстрационный макет, не является официальным сайтом организации. Названия, цены и составы условные. Заказы попадают на тестовый <a href="kitchen.html">экран кухни</a>. Телефон и другие личные данные не собираются. Фотографии стоковые (Unsplash, свободная лицензия), в рабочей версии их заменят снимками заведения: <span class="warn">&lt;&lt;запросить у заказчика: фото блюд и зала, точный состав&gt;&gt;</span>. Аллергены и вес порций уточняйте у официанта.</p>
+  </footer>
+</div>
+
+<div class="cartbar" id="cartbar">
+  <div class="cartbar-in">
+    <span class="cart-sum" id="cartSum">0 ₽</span>
+    <button class="btn btn-primary" id="openCart" type="button">Посмотреть заказ</button>
+  </div>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheetTitle"><div class="sheet" id="sheetBody"></div></dialog>
+
+<script src="vibe.js"></script>
+<script>
+"use strict";
+const API = "https://zerno-lepestok-api.tuzir2022.workers.dev";
+
+/* ---------- Логгер ---------- */
+const log = (() => {
+  const L = { debug: 10, info: 20, warn: 30, error: 40 };
+  const min = location.hash.includes("debug") ? "debug" : "warn";
+  const emit = (level, msg, ctx) => { if (L[level] >= L[min]) console[level === "debug" ? "log" : level](JSON.stringify({ ts: new Date().toISOString(), level, scope: "zerno-kino", msg, ...ctx })); };
+  return { debug: (m, c) => emit("debug", m, c), info: (m, c) => emit("info", m, c), warn: (m, c) => emit("warn", m, c), error: (m, e, c) => emit("error", m, { ...c, error: { name: e?.name, message: e?.message, stack: e?.stack } }) };
+})();
+
+/* ---------- Данные меню (условные) ---------- */
+const CATS = [{ id: "coffee", name: "Кофе" }, { id: "drinks", name: "Не кофе" }, { id: "sweet", name: "Десерты" }, { id: "food", name: "Завтраки" }];
+const MENU = [
+  { id: "espresso", cat: "coffee", name: "Эспрессо", desc: "Двойной, насыщенный", meta: "60 мл", price: 150 },
+  { id: "americano", cat: "coffee", name: "Американо", desc: "Эспрессо и горячая вода", meta: "250 мл", price: 180 },
+  { id: "cappuccino", cat: "coffee", name: "Капучино", desc: "Эспрессо, молоко, плотная пенка", meta: "250 мл", price: 230 },
+  { id: "flatwhite", cat: "coffee", name: "Флэт уайт", desc: "Двойной эспрессо и бархатное молоко", meta: "200 мл", price: 240 },
+  { id: "raf", cat: "coffee", name: "Раф с лавандой", desc: "Сливки, ваниль, лаванда", meta: "300 мл", price: 290 },
+  { id: "filter", cat: "coffee", name: "Фильтр-кофе", desc: "Сорт недели, спросите у бариста", meta: "300 мл", price: 170 },
+  { id: "cocoa", cat: "drinks", name: "Какао", desc: "На молоке, с зефиром", meta: "300 мл", price: 240 },
+  { id: "seabuckthorn", cat: "drinks", name: "Облепиховый чай", desc: "Облепиха, имбирь, мёд", meta: "400 мл", price: 220 },
+  { id: "matcha", cat: "drinks", name: "Матча-латте", desc: "Японская матча, овсяное молоко", meta: "300 мл", price: 290 },
+  { id: "lemonade", cat: "drinks", name: "Домашний лимонад", desc: "Цитрусы и мята", meta: "400 мл", price: 250 },
+  { id: "cheesecake", cat: "sweet", name: "Чизкейк «Нью-Йорк»", desc: "Малиновый соус", meta: "140 г", price: 260 },
+  { id: "croissant", cat: "sweet", name: "Миндальный круассан", desc: "Хрустящий, с кремом", meta: "110 г", price: 210 },
+  { id: "syrniki", cat: "sweet", name: "Сырники", desc: "Сметана и ягодный соус", meta: "180 г", price: 280 },
+  { id: "carrot", cat: "sweet", name: "Морковный торт", desc: "Сливочный крем и грецкий орех", meta: "130 г", price: 250 },
+  { id: "omelet", cat: "food", name: "Омлет с травами", desc: "Три яйца, зелень, тост", meta: "230 г", price: 320 },
+  { id: "avotoast", cat: "food", name: "Тост с авокадо", desc: "Яйцо пашот, семена", meta: "210 г", price: 390 },
+  { id: "oatmeal", cat: "food", name: "Овсянка с ягодами", desc: "На молоке, с мёдом", meta: "250 г", price: 260 },
+];
+const POPULAR = ["syrniki", "cheesecake", "matcha", "avotoast", "oatmeal", "carrot"];
+
+/* ---------- Состояние ---------- */
+const state = { table: null, cart: {}, lastOrder: null, comment: "" };
+const money = (n) => n.toLocaleString("ru-RU") + " ₽";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const byId = Object.fromEntries(MENU.map((m) => [m.id, m]));
+function safeStore(op, key, val) { try { return op === "get" ? localStorage.getItem(key) : localStorage.setItem(key, val); } catch { return null; } }
+
+/* ---------- Стол ---------- */
+function initTable() {
+  const fromUrl = Number(new URLSearchParams(location.search).get("table"));
+  const fromStore = Number(safeStore("get", "zerno.table"));
+  const t = [fromUrl, fromStore].find((n) => Number.isInteger(n) && n >= 1 && n <= 50) || null;
+  const sel = $("#tableSel");
+  sel.innerHTML = '<option value="">Выберите стол</option>' + Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}">Стол ${i + 1}</option>`).join("");
+  sel.addEventListener("change", () => setTable(Number(sel.value) || null));
+  setTable(t);
+}
+function setTable(t) {
+  state.table = t;
+  if (t) safeStore("set", "zerno.table", String(t));
+  document.querySelectorAll(".tableNo").forEach((e) => { e.textContent = t ?? "?"; });
+  document.querySelector(".table-pick").hidden = Boolean(t && new URLSearchParams(location.search).get("table"));
+  if (t) $("#tableSel").value = String(t);
+}
+
+/* ---------- Лента популярного ---------- */
+function renderRibbon() {
+  $("#ribbon").innerHTML = `
+    <div class="gal__intro">
+      <h2 class="nd">Популярное сегодня</h2>
+      <p>Что чаще всего заказывают к кофе. Добавьте в заказ прямо отсюда.</p>
+      <a class="v-btn" href="#menu">Всё меню</a>
+    </div>` + POPULAR.map((id) => { const m = byId[id]; return `
+    <article class="work">
+      <div class="work__card"><img src="assets/card-${m.id}.webp" alt="" width="600" height="800" decoding="async"></div>
+      <div class="work__cap">
+        <h3>${esc(m.name)}</h3>
+        <p>${esc(m.desc)}<span class="meta">${esc(m.meta)}</span></p>
+        <div class="work__buy"><b>${money(m.price)}</b><span class="ctl" data-ctl="${m.id}"></span></div>
+      </div>
+    </article>`; }).join("");
+}
+
+/* ---------- Меню ---------- */
+function renderMenu() {
+  $("#cats").innerHTML = CATS.map((c, i) => `<button class="chip" type="button" data-cat="${c.id}" aria-current="${i === 0}">${c.name}</button>`).join("");
+  $("#groups").innerHTML = CATS.map((c) => `
+    <section class="group" id="cat-${c.id}" data-cat="${c.id}" aria-labelledby="h-${c.id}">
+      <h3 class="nd" id="h-${c.id}">${c.name}</h3>
+      ${MENU.filter((m) => m.cat === c.id).map((m) => `
+        <article class="item" data-id="${m.id}">
+          <img class="thumb" src="assets/${m.id}.webp" alt="" width="64" height="64" decoding="async">
+          <div class="item-body"><h4 class="item-name">${esc(m.name)}</h4><p class="item-desc">${esc(m.desc)}<span class="meta">${esc(m.meta)}</span></p></div>
+          <div class="item-buy"><span class="price">${money(m.price)}</span><span class="ctl" data-ctl="${m.id}"></span></div>
+        </article>`).join("")}
+    </section>`).join("");
+  MENU.forEach((m) => renderCtl(m.id));
+}
+function renderCtl(id) {
+  const q = state.cart[id] || 0;
+  const name = esc(byId[id].name);
+  const html = q
+    ? `<span class="stepper"><button type="button" data-act="dec" data-id="${id}" aria-label="Убрать ${name}">−</button><output aria-live="polite">${q}</output><button type="button" data-act="inc" data-id="${id}" aria-label="Добавить ещё ${name}">+</button></span>`
+    : `<button class="add" type="button" data-act="inc" data-id="${id}" aria-label="Добавить ${name}">Добавить</button>`;
+  document.querySelectorAll(`[data-ctl="${id}"]`).forEach((h) => { h.innerHTML = html; });
+}
+function change(id, d) {
+  const q = Math.max(0, Math.min(20, (state.cart[id] || 0) + d));
+  if (q) state.cart[id] = q; else delete state.cart[id];
+  renderCtl(id);
+  updateBar();
+  if ($("#sheet").open && !state.lastOrder) {
+    renderSheet();
+    // после перерисовки возвращаем фокус на ту же кнопку, чтобы работала клавиатура
+    const again = document.querySelector(`#sheet [data-act="${d > 0 ? "inc" : "dec"}"][data-id="${id}"]`) || document.querySelector("#sheet [data-act]") || document.querySelector("#sheet [data-close]");
+    if (again) again.focus();
+  }
+}
+function removeLine(id) {
+  delete state.cart[id];
+  renderCtl(id); updateBar(); renderSheet();
+  const next = document.querySelector("#sheet [data-rm]") || document.querySelector("#sheet [data-close]");
+  if (next) next.focus();
+}
+const lines = () => Object.entries(state.cart).map(([id, qty]) => ({ id, qty, ...byId[id] }));
+const total = () => lines().reduce((s, l) => s + l.price * l.qty, 0);
+const count = () => lines().reduce((s, l) => s + l.qty, 0);
+function updateBar() {
+  const n = count();
+  $("#cartbar").classList.toggle("on", n > 0);
+  $("#cartSum").innerHTML = `${money(total())}<small>${n} поз.</small>`;
+}
+
+/* ---------- Лист заказа ---------- */
+function renderSheet() {
+  const ls = lines();
+  $("#sheetBody").innerHTML = `
+    <div class="sheet-head"><h2 id="sheetTitle">Ваш заказ</h2><button class="x" type="button" data-close aria-label="Закрыть">×</button></div>
+    ${state.table ? "" : '<p class="msg err">Выберите номер стола на первом экране, чтобы официант знал, куда нести.</p>'}
+    ${ls.length ? `<ul class="lines">${ls.map((l) => `<li>
+      <span class="ln">${esc(l.name)}<small>${money(l.price)} за штуку</small></span><span class="lsum">${money(l.price * l.qty)}</span>
+      <span class="stepper"><button type="button" data-act="dec" data-id="${l.id}" aria-label="Уменьшить: ${esc(l.name)}">−</button><output aria-live="polite">${l.qty}</output><button type="button" data-act="inc" data-id="${l.id}" aria-label="Добавить ещё: ${esc(l.name)}">+</button></span>
+      <button class="rm" type="button" data-rm="${l.id}" aria-label="Убрать из заказа: ${esc(l.name)}">Убрать</button>
+    </li>`).join("")}</ul>
+    <div class="total"><span>Итого</span><span>${money(total())}</span></div>` : '<p class="empty">В заказе пока ничего нет. Вернитесь в меню и добавьте позиции.</p>'}
+    <label class="field">Пожелания к заказу<textarea id="comment" maxlength="200" placeholder="Например: без сахара">${esc(state.comment)}</textarea></label>
+    <p class="msg err" id="err" hidden></p>
+    <div class="sheet-actions">
+      <button class="btn btn-primary" id="send" type="button" ${ls.length && state.table ? "" : "disabled"}>Отправить заказ</button>
+      <button class="btn" id="callIn" type="button" ${state.table ? "" : "disabled"}>Позвать официанта</button>
+    </div>`;
+}
+function renderDone(order) {
+  $("#sheetBody").innerHTML = `
+    <div class="sheet-head"><h2 id="sheetTitle">Заказ отправлен</h2><button class="x" type="button" data-close aria-label="Закрыть">×</button></div>
+    <div class="done"><h3>№ ${order.number}</h3><p>Стол ${state.table}, ${money(order.total)}. Платить официанту.</p></div>
+    <p class="msg ok" id="status">Ждём подтверждения официанта</p>
+    <div class="sheet-actions"><button class="btn" id="callIn" type="button">Позвать официанта</button><button class="btn btn-primary" data-close type="button">Вернуться в меню</button></div>`;
+}
+
+async function api(path, body) {
+  const res = await fetch(API + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error(data.message || data.error || "http " + res.status); e.code = data.error; throw e; }
+  return data;
+}
+const ERR_TEXT = { bad_table: "Выберите номер стола.", bad_items: "Корзина пуста.", bad_item: "Одной из позиций уже нет в меню. Обновите страницу." };
+
+async function sendOrder() {
+  const btn = $("#send"), err = $("#err");
+  btn.disabled = true; btn.textContent = "Отправляем..."; err.hidden = true;
+  try {
+    const order = await api("/coffee/order", { table: state.table, comment: $("#comment").value, items: lines().map((l) => ({ id: l.id, qty: l.qty })) });
+    log.info("order_sent", { number: order.number, table: state.table });
+    state.lastOrder = order; state.cart = {}; state.comment = "";
+    MENU.forEach((m) => renderCtl(m.id)); updateBar();
+    renderDone(order); pollStatus(order.id);
+  } catch (e) {
+    log.error("order_failed", e, { table: state.table, lines: lines().length });
+    err.textContent = ERR_TEXT[e.code] || "Не удалось отправить заказ. Проверьте интернет и нажмите ещё раз. Корзина сохранена.";
+    err.hidden = false; btn.disabled = false; btn.textContent = "Отправить заказ";
+  }
+}
+let pollTimer = null;
+function pollStatus(id) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => {
+    try {
+      const { status } = await api("/coffee/status?id=" + encodeURIComponent(id));
+      const el = $("#status");
+      if (el && status === "accepted") { el.textContent = "Официант принял заказ, готовим"; return; }
+    } catch (e) { log.warn("status_poll_failed", { message: e.message }); }
+    if ($("#sheet").open) pollStatus(id);
+  }, 5000);
+}
+async function callWaiter(btn) {
+  if (!state.table) { openSheet(); return; }
+  const old = btn.textContent; btn.disabled = true; btn.textContent = "Зовём...";
+  try { await api("/coffee/call", { table: state.table }); btn.textContent = "Официант идёт"; }
+  catch (e) { log.error("call_failed", e, { table: state.table }); btn.textContent = "Не вышло, ещё раз"; btn.disabled = false; return; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 4000);
+}
+function openSheet() { state.lastOrder = null; renderSheet(); $("#sheet").showModal(); }
+
+/* ---------- События ---------- */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.act) change(t.dataset.id, t.dataset.act === "inc" ? 1 : -1);
+  else if (t.dataset.rm) removeLine(t.dataset.rm);
+  else if (t.hasAttribute("data-close")) $("#sheet").close();
+  else if (t.id === "openCart") openSheet();
+  else if (t.id === "send") sendOrder();
+  else if (t.id === "callIn" || t.id === "callTop") callWaiter(t);
+  else if (t.dataset.cat) document.getElementById("cat-" + t.dataset.cat).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+$("#sheet").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+$("#sheet").addEventListener("input", (e) => { if (e.target.id === "comment") state.comment = e.target.value; });
+$("#sheet").addEventListener("close", () => clearTimeout(pollTimer));
+
+/* Подсветка текущего раздела меню */
+function watchSections() {
+  const chips = [...document.querySelectorAll(".chip")];
+  const io = new IntersectionObserver((entries) => {
+    entries.filter((x) => x.isIntersecting).forEach((x) => chips.forEach((c) => c.setAttribute("aria-current", String(c.dataset.cat === x.target.dataset.cat))));
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  document.querySelectorAll(".group").forEach((g) => io.observe(g));
+}
+
+window.addEventListener("error", (e) => log.error("window_error", e.error || new Error(e.message), { file: e.filename, line: e.lineno }));
+renderRibbon(); renderMenu(); initTable(); watchSections(); updateBar();
+window.Vibe && Vibe.mount($("#page"));
+</script>
+</body>
+</html>
